@@ -305,6 +305,24 @@ class NodePath {
   }
 
   /**
+   * Indicates if the matching direction is forward.
+   *
+   * This means that the deepest lookaround of the path is not a
+   * lookbehind. This ensures that the current node will be
+   * matched in the forward direction.
+   */
+  isForward() {
+    let currentNodePath = this.parentPath;
+
+    if (!currentNodePath || currentNodePath.node.kind == 'Lookahead') {
+      return true;
+    }
+
+    return (currentNodePath.node.kind !== 'Lookbehind' && currentNodePath.isForward());
+  }
+
+
+  /**
    * Returns a NodePath instance for a node.
    *
    * The same NodePath can be reused in several places, e.g.

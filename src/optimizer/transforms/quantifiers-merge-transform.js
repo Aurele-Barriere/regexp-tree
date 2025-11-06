@@ -41,58 +41,52 @@ module.exports = {
         from: previousSiblingFrom,
         to: previousSiblingTo
       } = extractFromTo(previousSibling.node.quantifier);
+      let previousSiblingGreedy = previousSibling.node.quantifier.greedy;
 
       let {
         from: nodeFrom,
         to: nodeTo
       } = extractFromTo(node.quantifier);
+      let nodeGreedy = node.quantifier.greedy;
 
-      // It's does not seem reliable to merge quantifiers with different greediness
-      // when none of both is a greedy open range
-      if (
-        previousSibling.node.quantifier.greedy !== node.quantifier.greedy &&
-        !isGreedyOpenRange(previousSibling.node.quantifier) &&
-        !isGreedyOpenRange(node.quantifier)
-      ) {
-        return;
-      }
 
-      // a*a* -> a*
-      // a*a+ -> a+
-      // a+a+ -> a{2,}
-      // a{2}a{4} -> a{6}
-      // a{1,2}a{2,3} -> a{3,5}
-      // a{1,}a{2,} -> a{3,}
-      // a+a{2,} -> a{3,}
-
-      // a??a{2,} -> a{2,}
-      // a*?a{2,} -> a{2,}
-      // a+?a{2,} -> a{3,}
-
-      node.quantifier.kind = 'Range';
-      node.quantifier.from = previousSiblingFrom + nodeFrom;
-      if (previousSiblingTo && nodeTo) {
-        node.quantifier.to = previousSiblingTo + nodeTo;
+      
+      // TODO: simpify control-flow and definitions
+      if (path.isForward()) {
+        // r{n1}r{n2,m2} -> r{n1+n2,n1+m2}
+        // r{n1}r{n2,m2}? -> r{n1+n2,n1+m2}?
+        // r{n1}?r{n2,m2} -> r{n1+n2,n1+m2}
+        // r{n1}?r{n2,m2}? -> r{n1+n2,n1+m2}?
+        if (previousSiblingTo == previousSiblingFrom) {
+          makeQuantifier(node, previousSiblingFrom + nodeFrom, previousSiblingTo, nodeTo, nodeGreedy);
+          previousSibling.remove();
+          return;
+        }
+        // r{n1,m1}r{0,m2} -> r{n1,m1+m2}
+        if (previousSiblingGreedy && nodeGreedy && nodeFrom == 0) {
+          makeQuantifier(node, previousSiblingFrom, previousSiblingTo, nodeTo, true);
+          previousSibling.remove();
+          return;
+        }
       } else {
-        delete node.quantifier.to;
-      }
-      if (
-        isGreedyOpenRange(previousSibling.node.quantifier) ||
-        isGreedyOpenRange(node.quantifier)
-      ) {
-        node.quantifier.greedy = true;
-      }
+        // r{n1,m1}r{n2} -> r{n1+n2,m2+n2}
+        // r{n1,m1}?r{n2} -> r{n1+n2,m2+n2}?
+        // r{n1,m1}r{n2}? -> r{n1+n2,m2+n2}
+        // r{n1,m1}?r{n2}? -> r{n1+n2,m2+n2}?
+        if (nodeTo == nodeFrom) {
+          makeQuantifier(node, previousSiblingFrom + nodeFrom, previousSiblingTo, nodeTo, previousSiblingGreedy);
+          previousSibling.remove();
+          return;
+        }
+        // r{0,m1}r{n2,m2} -> r{n2,m1+m2}
+        if (previousSiblingGreedy && nodeGreedy && previousSiblingFrom == 0) {
+          makeQuantifier(node, nodeFrom, previousSiblingTo, nodeTo, true);
+          previousSibling.remove();
+          return;
+        }
 
-      previousSibling.remove();
-
-    } else {
-      if (!previousSibling.hasEqualSource(path.getChild())) {
-        return;
-      }
-
-      increaseQuantifierByOne(node.quantifier);
-      previousSibling.remove();
-    }
+      };
+    }  
   }
 };
 
@@ -121,4 +115,15 @@ function extractFromTo(quantifier) {
     }
   }
   return {from, to};
+}
+
+function makeQuantifier(node, from, to1, to2, greedy){
+  node.quantifier.kind = 'Range';
+  if (to1 && to2) {
+        node.quantifier.to = to1 + to2;
+      } else {
+        delete node.quantifier.to;
+      }
+  node.quantifier.from = from;
+  node.quantifier.greedy = greedy;
 }

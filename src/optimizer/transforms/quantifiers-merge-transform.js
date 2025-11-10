@@ -5,12 +5,10 @@
 
 'use strict';
 
-const {increaseQuantifierByOne} = require('../../transform/utils');
-
 /**
  * A regexp-tree plugin to merge quantifiers
  *
- * a{2}a+ ->
+ * a{2}a+ -> a{3,}
  * a{2}a{3} -> a{5}
  * a{1,2}a{0,3} -> a{1,5}
  */
@@ -37,35 +35,21 @@ module.exports = {
         return;
       }
 
-      let {
-        from: previousSiblingFrom,
-        to: previousSiblingTo
-      } = extractFromTo(previousSibling.node.quantifier);
-      let previousSiblingGreedy = previousSibling.node.quantifier.greedy;
+      const quant = node.quantifier;
+      const prevQuant = previousSibling.node.quantifier;
 
-      let {
-        from: nodeFrom,
-        to: nodeTo
-      } = extractFromTo(node.quantifier);
-      let nodeGreedy = node.quantifier.greedy;
-
-
-      
-      // TODO: simpify control-flow and definitions
-      if (path.isForward()) {
+      if (isForward(path)) {
         // r{n1}r{n2,m2} -> r{n1+n2,n1+m2}
         // r{n1}r{n2,m2}? -> r{n1+n2,n1+m2}?
         // r{n1}?r{n2,m2} -> r{n1+n2,n1+m2}
         // r{n1}?r{n2,m2}? -> r{n1+n2,n1+m2}?
-        if (previousSiblingTo == previousSiblingFrom) {
-          makeQuantifier(node, previousSiblingFrom + nodeFrom, previousSiblingTo, nodeTo, nodeGreedy);
-          previousSibling.remove();
+        if (isForced(prevQuant)) {
+          mergeQuantifiers(node, previousSibling, quant.greedy);
           return;
         }
         // r{n1,m1}r{0,m2} -> r{n1,m1+m2}
-        if (previousSiblingGreedy && nodeGreedy && nodeFrom == 0) {
-          makeQuantifier(node, previousSiblingFrom, previousSiblingTo, nodeTo, true);
-          previousSibling.remove();
+        if (prevQuant.greedy && quant.greedy && isFromZero(quant)) {
+          mergeQuantifiers(node, previousSibling, true);
           return;
         }
       } else {
@@ -73,32 +57,23 @@ module.exports = {
         // r{n1,m1}?r{n2} -> r{n1+n2,m1+n2}?
         // r{n1,m1}r{n2}? -> r{n1+n2,m1+n2}
         // r{n1,m1}?r{n2}? -> r{n1+n2,m1+n2}?
-        if (nodeTo == nodeFrom) {
-          makeQuantifier(node, previousSiblingFrom + nodeFrom, previousSiblingTo, nodeTo, previousSiblingGreedy);
-          previousSibling.remove();
+        if (isForced(quant)) {
+          mergeQuantifiers(node, previousSibling, prevQuant.greedy);
           return;
         }
         // r{0,m1}r{n2,m2} -> r{n2,m1+m2}
-        if (previousSiblingGreedy && nodeGreedy && previousSiblingFrom == 0) {
-          makeQuantifier(node, nodeFrom, previousSiblingTo, nodeTo, true);
-          previousSibling.remove();
+        if (prevQuant.greedy && quant.greedy && isFromZero(prevQuant)) {
+          mergeQuantifiers(node, previousSibling, true);
           return;
         }
-
       };
     }  
   }
 };
 
-function isGreedyOpenRange(quantifier) {
-  return quantifier.greedy &&
-    (
-      quantifier.kind === '+' ||
-      quantifier.kind === '*' ||
-      (quantifier.kind === 'Range' && !quantifier.to)
-    );
-}
-
+/**
+ * Extracts the from and to values of a quantifier.
+ */
 function extractFromTo(quantifier) {
   let from, to;
   if (quantifier.kind === '*') {
@@ -117,13 +92,64 @@ function extractFromTo(quantifier) {
   return {from, to};
 }
 
-function makeQuantifier(node, from, to1, to2, greedy){
+/**
+ * A quantifier is forced if its minimum number of iterations
+ * is equal to its maximum (e.g. a{3}).
+ */
+function isForced(quantifier) {
+  let {from,to} = extractFromTo(quantifier);
+  return (from == to);
+}
+
+/**
+ * A quantifier is FromZero if it has no
+ * minimum iterations.
+ */
+function isFromZero(quantifier) {
+  let {from,to} = extractFromTo(quantifier);
+  return (from == 0);
+}
+
+/**
+ * Merges two quantifier nodes.
+ * Adds the from and to values into the current node, 
+ * and deletes the previous node.
+ */
+function mergeQuantifiers(node, previous, greedy) {
+  let {
+    from: prevFrom,
+    to: prevTo
+  } = extractFromTo(previous.node.quantifier);
+  let {
+    from: nodeFrom,
+    to: nodeTo
+  } = extractFromTo(node.quantifier);
+
   node.quantifier.kind = 'Range';
-  if (to1 && to2) {
-        node.quantifier.to = to1 + to2;
-      } else {
-        delete node.quantifier.to;
-      }
-  node.quantifier.from = from;
+  if (prevTo && nodeTo) {
+        node.quantifier.to = prevTo + nodeTo;
+  } else {
+    delete node.quantifier.to;
+  }
+  node.quantifier.from = prevFrom + nodeFrom;
   node.quantifier.greedy = greedy;
+  previous.remove();
+  return;
+}
+
+/**
+   * Indicates if the matching direction of a path is forward.
+   *
+   * This means that the deepest lookaround of the path is not a
+   * lookbehind. This ensures that the current node will be
+   * matched in the forward direction.
+   */
+function isForward(path) {
+    let parent = path.parentPath;
+
+    if (!parent || parent.node.kind == 'Lookahead') {
+      return true;
+    }
+
+    return (parent.node.kind !== 'Lookbehind' && isForward(parent));
 }

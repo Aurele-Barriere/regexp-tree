@@ -10,9 +10,9 @@ const {increaseQuantifierByOne} = require('../../transform/utils');
 /**
  * A regexp-tree plugin to merge quantifiers
  *
- * a+a+ -> a{2,}
+ * a{2}a+ ->
  * a{2}a{3} -> a{5}
- * a{1,2}a{2,3} -> a{3,5}
+ * a{1,2}a{0,3} -> a{1,5}
  */
 module.exports = {
 
@@ -69,10 +69,10 @@ module.exports = {
           return;
         }
       } else {
-        // r{n1,m1}r{n2} -> r{n1+n2,m2+n2}
-        // r{n1,m1}?r{n2} -> r{n1+n2,m2+n2}?
-        // r{n1,m1}r{n2}? -> r{n1+n2,m2+n2}
-        // r{n1,m1}?r{n2}? -> r{n1+n2,m2+n2}?
+        // r{n1,m1}r{n2} -> r{n1+n2,m1+n2}
+        // r{n1,m1}?r{n2} -> r{n1+n2,m1+n2}?
+        // r{n1,m1}r{n2}? -> r{n1+n2,m1+n2}
+        // r{n1,m1}?r{n2}? -> r{n1+n2,m1+n2}?
         if (nodeTo == nodeFrom) {
           makeQuantifier(node, previousSiblingFrom + nodeFrom, previousSiblingTo, nodeTo, previousSiblingGreedy);
           previousSibling.remove();

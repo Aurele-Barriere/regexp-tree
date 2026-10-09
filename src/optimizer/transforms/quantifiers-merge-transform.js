@@ -5,6 +5,8 @@
 
 'use strict';
 
+const {increaseQuantifierByOne} = require('../../transform/utils');
+
 /**
  * A regexp-tree plugin to merge quantifiers
  *
@@ -13,14 +15,10 @@
  * a{1,2}a{0,3} -> a{1,5}
  */
 module.exports = {
-
   Repetition(path) {
     const {node, parent} = path;
 
-    if (
-      parent.type !== 'Alternative' ||
-      !path.index
-    ) {
+    if (parent.type !== 'Alternative' || !path.index) {
       return;
     }
 
@@ -37,6 +35,13 @@ module.exports = {
 
       const quant = node.quantifier;
       const prevQuant = previousSibling.node.quantifier;
+
+      if (isUnamb(node.expression) && quant.greedy == prevQuant.greedy) {
+        console.log(node);
+        console.log(previousSibling);
+        mergeQuantifiers(node, previousSibling, quant.greedy);
+        return;
+      }
 
       if (isForward(path)) {
         // r{n1}r{n2,m2} -> r{n1+n2,n1+m2}
@@ -66,9 +71,19 @@ module.exports = {
           mergeQuantifiers(node, previousSibling, true);
           return;
         }
-      };
-    }  
-  }
+      }
+    } else {
+      if (
+        !previousSibling.hasEqualSource(path.getChild()) ||
+        !isUnamb(node.expression)
+      ) {
+        return;
+      }
+
+      increaseQuantifierByOne(node.quantifier);
+      previousSibling.remove();
+    }
+  },
 };
 
 /**
@@ -97,8 +112,8 @@ function extractFromTo(quantifier) {
  * is equal to its maximum (e.g. a{3}).
  */
 function isForced(quantifier) {
-  let {from,to} = extractFromTo(quantifier);
-  return (from == to);
+  let {from, to} = extractFromTo(quantifier);
+  return from == to;
 }
 
 /**
@@ -106,28 +121,22 @@ function isForced(quantifier) {
  * minimum iterations.
  */
 function isFromZero(quantifier) {
-  let {from,to} = extractFromTo(quantifier);
-  return (from == 0);
+  let {from, to} = extractFromTo(quantifier);
+  return from == 0;
 }
 
 /**
  * Merges two quantifier nodes.
- * Adds the from and to values into the current node, 
+ * Adds the from and to values into the current node,
  * and deletes the previous node.
  */
 function mergeQuantifiers(node, previous, greedy) {
-  let {
-    from: prevFrom,
-    to: prevTo
-  } = extractFromTo(previous.node.quantifier);
-  let {
-    from: nodeFrom,
-    to: nodeTo
-  } = extractFromTo(node.quantifier);
+  let {from: prevFrom, to: prevTo} = extractFromTo(previous.node.quantifier);
+  let {from: nodeFrom, to: nodeTo} = extractFromTo(node.quantifier);
 
   node.quantifier.kind = 'Range';
   if (prevTo && nodeTo) {
-        node.quantifier.to = prevTo + nodeTo;
+    node.quantifier.to = prevTo + nodeTo;
   } else {
     delete node.quantifier.to;
   }
@@ -138,18 +147,46 @@ function mergeQuantifiers(node, previous, greedy) {
 }
 
 /**
-   * Indicates if the matching direction of a path is forward.
-   *
-   * This means that the deepest lookaround of the path is not a
-   * lookbehind. This ensures that the current node will be
-   * matched in the forward direction.
-   */
+ * Indicates if the matching direction of a path is forward.
+ *
+ * This means that the deepest lookaround of the path is not a
+ * lookbehind. This ensures that the current node will be
+ * matched in the forward direction.
+ */
 function isForward(path) {
-    let parent = path.parentPath;
+  let parent = path.parentPath;
 
-    if (!parent || parent.node.kind == 'Lookahead') {
-      return true;
-    }
+  if (!parent || parent.node.kind == 'Lookahead') {
+    return true;
+  }
 
-    return (parent.node.kind !== 'Lookbehind' && isForward(parent));
+  return parent.node.kind !== 'Lookbehind' && isForward(parent);
+}
+
+/**
+ * Indicates if the current regex in non ambiguous.
+ *
+ * This means that the regex can match only in one way for any input.
+ * This function does not englobes all possible non ambiguous regex,
+ * but is assured to return false in case of an ambiguous regex.
+ */
+function isUnamb(node) {
+  if (
+    node.type == 'Epsilon' ||
+    node.type == 'Char' ||
+    node.type == 'CharacterClass' ||
+    node.type == 'UnicodeProperty' ||
+    node.type == 'Backreference' ||
+    node.type == 'Assertion'
+  ) {
+    return true;
+  } else if (node.type == 'Alternative') {
+    return node.expressions.every(x => isUnam(x));
+  } else if (node.type == 'Group') {
+    return isUnamb(node.expression);
+  } else if (node.type == 'Repetition' && isForced(node.quantifier)) {
+    return isUnamb(node.expression);
+  } else {
+    return false;
+  }
 }

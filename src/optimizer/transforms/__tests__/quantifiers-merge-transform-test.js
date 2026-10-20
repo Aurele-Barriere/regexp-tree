@@ -98,32 +98,7 @@ describe('merge closed greedy quantifier with closed greedy quantifier', () => {
     expect(re.toString()).toBe('/a{2,4}/');
   });
 });
-
-describe('merge closed greedy quantifier with closed ungreedy quantifier only if the regex is forward and n2 = 0, m1 = 0 or the regex is backward and n1 = 0, m2 = 0', () => {
-  it('a?a??', () => {
-    const re = transform(/a?a??/, [quantifiersMerge]);
-    expect(re.toString()).toBe('/a?a??/');
-
-    const re2 = transform(/a??a?/, [quantifiersMerge]);
-    expect(re2.toString()).toBe('/a??a?/');
-  });
-
-  it('a?a{2}?', () => {
-    const re = transform(/a?a{2}?/, [quantifiersMerge]);
-    expect(re.toString()).toBe('/a?a{2}?/');
-
-    const re2 = transform(/a{2}?a?/, [quantifiersMerge]);
-    expect(re2.toString()).toBe('/a{2,3}/');
-  });
-
-  it('a?a{1,2}?', () => {
-    const re = transform(/a?a{1,2}?/, [quantifiersMerge]);
-    expect(re.toString()).toBe('/a?a{1,2}?/');
-
-    const re2 = transform(/a{1,2}?a?/, [quantifiersMerge]);
-    expect(re2.toString()).toBe('/a{1,2}?a?/');
-  });
-
+describe('merge closed greedy quantifier with closed ungreedy quantifier if regex is forward and is first is forced or second is from zero', () => {
   it('a{2}a??', () => {
     const re = transform(/a{2}a??/, [quantifiersMerge]);
     expect(re.toString()).toBe('/a{2,3}?/');
@@ -147,13 +122,15 @@ describe('merge closed greedy quantifier with closed ungreedy quantifier only if
     const re2 = transform(/a{1,2}?a{2}/, [quantifiersMerge]);
     expect(re2.toString()).toBe('/a{1,2}?a{2}/');
   });
+});
 
-  it('a{1,2}a??', () => {
-    const re = transform(/a{1,2}a??/, [quantifiersMerge]);
-    expect(re.toString()).toBe('/a{1,2}a??/');
+describe('merge closed greedy quantifier with closed ungreedy quantifier if regex is backward and second is forced or first is from zero', () => {
+  it('a?a{2}?', () => {
+    const re = transform(/a?a{2}?/, [quantifiersMerge]);
+    expect(re.toString()).toBe('/a?a{2}?/');
 
-    const re2 = transform(/a??a{1,2}/, [quantifiersMerge]);
-    expect(re2.toString()).toBe('/a??a{1,2}/');
+    const re2 = transform(/a{2}?a?/, [quantifiersMerge]);
+    expect(re2.toString()).toBe('/a{2,3}/');
   });
 
   it('a{1,2}a{2}?', () => {
@@ -162,6 +139,31 @@ describe('merge closed greedy quantifier with closed ungreedy quantifier only if
 
     const re2 = transform(/a{2}?a{1,2}/, [quantifiersMerge]);
     expect(re2.toString()).toBe('/a{3,4}/');
+  });
+});
+describe('do not merge closed greedy quantifier with closed ungreedy quantifier in the other cases', () => {
+  it('a?a??', () => {
+    const re = transform(/a?a??/, [quantifiersMerge]);
+    expect(re.toString()).toBe('/a?a??/');
+
+    const re2 = transform(/a??a?/, [quantifiersMerge]);
+    expect(re2.toString()).toBe('/a??a?/');
+  });
+
+  it('a?a{1,2}?', () => {
+    const re = transform(/a?a{1,2}?/, [quantifiersMerge]);
+    expect(re.toString()).toBe('/a?a{1,2}?/');
+
+    const re2 = transform(/a{1,2}?a?/, [quantifiersMerge]);
+    expect(re2.toString()).toBe('/a{1,2}?a?/');
+  });
+
+  it('a{1,2}a??', () => {
+    const re = transform(/a{1,2}a??/, [quantifiersMerge]);
+    expect(re.toString()).toBe('/a{1,2}a??/');
+
+    const re2 = transform(/a??a{1,2}/, [quantifiersMerge]);
+    expect(re2.toString()).toBe('/a??a{1,2}/');
   });
 
   it('a{1,2}a{1,2}?', () => {
@@ -247,31 +249,7 @@ describe('merge closed greedy quantifier with open greedy quantifier', () => {
   });
 });
 
-describe('merge closed greedy quantifier with open ungreedy quantifier only if the regex is forward and m1 = 0 and n2 = 0, or the regex is backward and m2 = 0 and n1 = 0', () => {
-  it('a?a+?', () => {
-    const re = transform(/a?a+?/, [quantifiersMerge]);
-    expect(re.toString()).toBe('/a?a+?/');
-
-    const re2 = transform(/a+?a?/, [quantifiersMerge]);
-    expect(re2.toString()).toBe('/a+?a?/');
-  });
-
-  it('a?a*?', () => {
-    const re = transform(/a?a*?/, [quantifiersMerge]);
-    expect(re.toString()).toBe('/a?a*?/');
-
-    const re2 = transform(/a*?a?/, [quantifiersMerge]);
-    expect(re2.toString()).toBe('/a*?a?/');
-  });
-
-  it('a?a{2,}?', () => {
-    const re = transform(/a?a{2,}?/, [quantifiersMerge]);
-    expect(re.toString()).toBe('/a?a{2,}?/');
-
-    const re2 = transform(/a{2,}?a?/, [quantifiersMerge]);
-    expect(re2.toString()).toBe('/a{2,}?a?/');
-  });
-
+describe('merge closed greedy quantifier with open ungreedy quantifier if regex is forward and is first is forced or second is from zero', () => {
   it('a{2}a+?', () => {
     const re = transform(/a{2}a+?/, [quantifiersMerge]);
     expect(re.toString()).toBe('/a{3,}?/');
@@ -294,6 +272,32 @@ describe('merge closed greedy quantifier with open ungreedy quantifier only if t
 
     const re2 = transform(/a{2,}?a{2}/, [quantifiersMerge]);
     expect(re2.toString()).toBe('/a{2,}?a{2}/');
+  });
+});
+
+describe('do not merge closed greedy quantifier with open ungreedy quantifier', () => {
+  it('a?a+?', () => {
+    const re = transform(/a?a+?/, [quantifiersMerge]);
+    expect(re.toString()).toBe('/a?a+?/');
+
+    const re2 = transform(/a+?a?/, [quantifiersMerge]);
+    expect(re2.toString()).toBe('/a+?a?/');
+  });
+
+  it('a?a*?', () => {
+    const re = transform(/a?a*?/, [quantifiersMerge]);
+    expect(re.toString()).toBe('/a?a*?/');
+
+    const re2 = transform(/a*?a?/, [quantifiersMerge]);
+    expect(re2.toString()).toBe('/a*?a?/');
+  });
+
+  it('a?a{2,}?', () => {
+    const re = transform(/a?a{2,}?/, [quantifiersMerge]);
+    expect(re.toString()).toBe('/a?a{2,}?/');
+
+    const re2 = transform(/a{2,}?a?/, [quantifiersMerge]);
+    expect(re2.toString()).toBe('/a{2,}?a?/');
   });
 
   it('a{1,2}a+?', () => {

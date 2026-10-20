@@ -15,10 +15,12 @@ const {increaseQuantifierByOne} = require('../../transform/utils');
  * a{1,2}a{0,3} -> a{1,5}
  */
 module.exports = {
+
   Repetition(path) {
     const {node, parent} = path;
 
-    if (parent.type !== 'Alternative' || !path.index) {
+    if (parent.type !== 'Alternative' ||
+        !path.index) {
       return;
     }
 

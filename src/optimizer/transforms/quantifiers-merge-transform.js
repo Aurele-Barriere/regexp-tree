@@ -36,11 +36,17 @@ module.exports = {
       const quant = node.quantifier;
       const prevQuant = previousSibling.node.quantifier;
 
-      if (isUnamb(node.expression) && quant.greedy == prevQuant.greedy) {
-        console.log(node);
-        console.log(previousSibling);
-        mergeQuantifiers(node, previousSibling, quant.greedy);
-        return;
+      if (isUnamb(node.expression)) {
+        if (quant.greedy == prevQuant.greedy) {
+          mergeQuantifiers(node, previousSibling, prevQuant.greedy);
+          return;
+        } else if (isGreedyOpenRange(previousSibling.node.quantifier)) {
+          mergeQuantifiers(node, previousSibling, true);
+          return;
+        } else if (isGreedyOpenRange(node.quantifier)) {
+          mergeQuantifiers(node, previousSibling, true);
+          return;
+        }
       }
 
       if (isForward(path)) {
@@ -189,4 +195,13 @@ function isUnamb(node) {
   } else {
     return false;
   }
+}
+
+function isGreedyOpenRange(quantifier) {
+  return (
+    quantifier.greedy &&
+    (quantifier.kind === '+' ||
+      quantifier.kind === '*' ||
+      (quantifier.kind === 'Range' && !quantifier.to))
+  );
 }

@@ -15,12 +15,10 @@ const {increaseQuantifierByOne} = require('../../transform/utils');
  * a{1,2}a{0,3} -> a{1,5}
  */
 module.exports = {
-
   Repetition(path) {
     const {node, parent} = path;
 
-    if (parent.type !== 'Alternative' ||
-        !path.index) {
+    if (parent.type !== 'Alternative' || !path.index) {
       return;
     }
 
@@ -38,14 +36,19 @@ module.exports = {
       const quant = node.quantifier;
       const prevQuant = previousSibling.node.quantifier;
 
+      // If r in unambigous:
+      // r{n1, m1}r{n2, m2} -> r{n1 + n2, m1 + m2}
+      // (r{n1, m1}?)(r{n2, m2}?) -> r{n1 + n2, m1 + m2}?
+      // r{n1,}(r{n2, m2}?) -> r{n1 + n2, }
+      // r{n1,m1}?r{n2,} -> r{n1 + n2, }
       if (isUnamb(node.expression)) {
         if (quant.greedy == prevQuant.greedy) {
           mergeQuantifiers(node, previousSibling, prevQuant.greedy);
           return;
-        } else if (isGreedyOpenRange(previousSibling.node.quantifier)) {
+        } else if (isGreedyOpenRange(prevQuant)) {
           mergeQuantifiers(node, previousSibling, true);
           return;
-        } else if (isGreedyOpenRange(node.quantifier)) {
+        } else if (isGreedyOpenRange(quant)) {
           mergeQuantifiers(node, previousSibling, true);
           return;
         }
@@ -65,6 +68,14 @@ module.exports = {
           mergeQuantifiers(node, previousSibling, true);
           return;
         }
+        // r{n1,}r{m1} -> r{n1,}
+        if (isGreedyOpenRange(prevQuant) && isFromZero(prevQuant)) {
+          mergeQuantifiers(node, previousSibling, true);
+        }
+        // r{n1,m1}r{0,} -> r{n1,}
+        if (isGreedyOpenRange(quant) && isFromZero(prevQuant)) {
+          mergeQuantifiers(node, previousSibling, true);
+        }
       } else {
         // r{n1,m1}r{n2} -> r{n1+n2,m1+n2}
         // r{n1,m1}?r{n2} -> r{n1+n2,m1+n2}?
@@ -78,6 +89,14 @@ module.exports = {
         if (prevQuant.greedy && quant.greedy && isFromZero(prevQuant)) {
           mergeQuantifiers(node, previousSibling, true);
           return;
+        }
+        // r{0,}r{n1,m1} -> r{n1,}
+        if (isGreedyOpenRange(prevQuant) && isFromZero(quant)) {
+          mergeQuantifiers(node, previousSibling, true);
+        }
+        // r{m1}r{n1,} -> r{n1,}
+        if (isGreedyOpenRange(quant) && isFromZero(quant)) {
+          mergeQuantifiers(node, previousSibling, true);
         }
       }
     } else {
@@ -189,7 +208,7 @@ function isUnamb(node) {
   ) {
     return true;
   } else if (node.type == 'Alternative') {
-    return node.expressions.every(x => isUnam(x));
+    return node.expressions.every(x => isUnamb(x));
   } else if (node.type == 'Group') {
     return isUnamb(node.expression);
   } else if (node.type == 'Repetition' && isForced(node.quantifier)) {

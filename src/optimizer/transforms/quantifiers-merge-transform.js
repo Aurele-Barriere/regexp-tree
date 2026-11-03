@@ -18,7 +18,10 @@ module.exports = {
   Repetition(path) {
     const {node, parent} = path;
 
-    if (parent.type !== 'Alternative' || !path.index) {
+    if (
+      parent.type !== 'Alternative' ||
+      !path.index
+    ) {
       return;
     }
 
@@ -100,10 +103,11 @@ module.exports = {
         }
       }
     } else {
-      // r r{n1, m1} -> r{n1 + 1, m1}
+      // If r is unambigous:
+      // r r{n1, m1} -> r{n1 + 1, m1} 
       if (
         previousSibling.hasEqualSource(path.getChild()) &&
-        isUnamb(node.expression)
+          isUnamb(node.expression)
       ) {
         increaseQuantifierByOne(node.quantifier);
         previousSibling.remove();
@@ -120,9 +124,9 @@ module.exports = {
 function isGreedyOpenRange(quantifier) {
   return (
     quantifier.greedy &&
-    (quantifier.kind === '+' ||
-      quantifier.kind === '*' ||
-      (quantifier.kind === 'Range' && !quantifier.to))
+      (quantifier.kind === '+' ||
+       quantifier.kind === '*' ||
+       (quantifier.kind === 'Range' && !quantifier.to))
   );
 }
 
@@ -191,7 +195,7 @@ function mergeQuantifiers(node, previous, greedy) {
  *
  * This means that the deepest lookaround of the path is not a
  * lookbehind. This ensures that the current node will be
- *
+ * 
  */
 function isForward(path) {
   let parent = path.parentPath;
@@ -213,11 +217,11 @@ function isForward(path) {
 function isUnamb(node) {
   if (
     node.type == 'Epsilon' ||
-    node.type == 'Char' ||
-    node.type == 'CharacterClass' ||
-    node.type == 'UnicodeProperty' ||
-    node.type == 'Backreference' ||
-    node.type == 'Assertion'
+      node.type == 'Char' ||
+      node.type == 'CharacterClass' ||
+      node.type == 'UnicodeProperty' ||
+      node.type == 'Backreference' ||
+      node.type == 'Assertion'
   ) {
     return true;
   } else if (node.type == 'Alternative') {
@@ -230,3 +234,5 @@ function isUnamb(node) {
     return false;
   }
 }
+
+

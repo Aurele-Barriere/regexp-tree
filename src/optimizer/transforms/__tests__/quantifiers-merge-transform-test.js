@@ -9,7 +9,7 @@ const {transform} = require('../../../transform');
 const quantifiersMerge = require('../quantifiers-merge-transform');
 
 describe('merge quantifiers with simple previous sibling', () => {
-  
+
   it('aa* -> a+', () => {
     const re = transform(/aa*/, [
       quantifiersMerge
@@ -51,7 +51,7 @@ describe('merge quantifiers with simple previous sibling', () => {
       quantifiersMerge
     ]);
     expect(re.toString()).toBe('/a{4}/');
-    
+
     const re2 = transform(/aa{3}?/, [
       quantifiersMerge
     ]);
@@ -84,6 +84,7 @@ describe('merge quantifiers with simple previous sibling', () => {
 });
 
 describe('merge closed greedy quantifier with closed greedy quantifier', () => {
+
   it('a?a?', () => {
     const re = transform(/a?a?/, [
       quantifiersMerge
@@ -141,7 +142,9 @@ describe('merge closed greedy quantifier with closed greedy quantifier', () => {
     expect(re.toString()).toBe('/a{2,4}/');
   });
 });
-describe('merge closed greedy quantifier with closed ungreedy quantifier if regex is forward and is first is forced or second is from zero', () => {
+
+describe('merge closed greedy quantifier with closed ungreedy quantifier if matching direction is forward on some specific cases', () => {
+
   it('a{2}a??', () => {
     const re = transform(/a{2}a??/, [
       quantifiersMerge
@@ -179,7 +182,8 @@ describe('merge closed greedy quantifier with closed ungreedy quantifier if rege
   });
 });
 
-describe('merge quantifiers of different greedyness if the matching direction is backwardon some specific cases', () => {
+describe('merge closed greedy quantifier with closed ungreedy quantifier if the matching direction is backward on some specific cases', () => {
+
   it('a?a{2}?', () => {
     const re = transform(/a?a{2}?/, [
       quantifiersMerge
@@ -204,7 +208,9 @@ describe('merge quantifiers of different greedyness if the matching direction is
     expect(re2.toString()).toBe('/a{3,4}/');
   });
 });
+
 describe('do not merge closed greedy quantifier with closed ungreedy quantifier in the other cases', () => {
+
   it('a?a??', () => {
     const re = transform(/a?a??/, [
       quantifiersMerge
@@ -364,7 +370,8 @@ describe('merge closed greedy quantifier with open greedy quantifier', () => {
   });
 });
 
-describe('merge quantifiers of different greedyness if the matching direction is forward, on some specific cases', () => {
+describe('merge closed greedy quantifiers with open ungreedy quantifier if the matching direction is forward on some specific cases', () => {
+
   it('a{2}a+?', () => {
     const re = transform(/a{2}a+?/, [
       quantifiersMerge
@@ -403,6 +410,7 @@ describe('merge quantifiers of different greedyness if the matching direction is
 });
 
 describe('do not merge closed greedy quantifier with open ungreedy quantifier', () => {
+
   it('a?a+?', () => {
     const re = transform(/a?a+?/, [
       quantifiersMerge
@@ -477,6 +485,7 @@ describe('do not merge closed greedy quantifier with open ungreedy quantifier', 
 });
 
 describe('merge closed ungreedy quantifier with closed ungreedy quantifier', () => {
+
   it('a??a??', () => {
     const re = transform(/a??a??/, [
       quantifiersMerge
@@ -536,6 +545,7 @@ describe('merge closed ungreedy quantifier with closed ungreedy quantifier', () 
 });
 
 describe('merge closed ungreedy quantifier with open greedy quantifier', () => {
+
   it('a??a+', () => {
     const re = transform(/a??a+/, [
       quantifiersMerge
@@ -646,6 +656,7 @@ describe('merge closed ungreedy quantifier with open greedy quantifier', () => {
 });
 
 describe('merge closed ungreedy quantifier with open ungreedy quantifier', () => {
+
   it('a??a+?', () => {
     const re = transform(/a??a+?/, [
       quantifiersMerge
@@ -756,6 +767,7 @@ describe('merge closed ungreedy quantifier with open ungreedy quantifier', () =>
 });
 
 describe('merge open greedy quantifier with open greedy quantifier', () => {
+
   it('a+a+', () => {
     const re = transform(/a+a+/, [
       quantifiersMerge
@@ -815,6 +827,7 @@ describe('merge open greedy quantifier with open greedy quantifier', () => {
 });
 
 describe('merge open greedy quantifier with open ungreedy quantifier', () => {
+
   it('a+a+?', () => {
     const re = transform(/a+a+?/, [
       quantifiersMerge
@@ -925,6 +938,7 @@ describe('merge open greedy quantifier with open ungreedy quantifier', () => {
 });
 
 describe('merge open ungreedy quantifier with open ungreedy quantifier', () => {
+
   it('a+?a+?', () => {
     const re = transform(/a+?a+?/, [
       quantifiersMerge

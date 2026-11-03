@@ -15,6 +15,7 @@ const {increaseQuantifierByOne} = require('../../transform/utils');
  * a{1,2}a{0,3} -> a{1,5}
  */
 module.exports = {
+
   Repetition(path) {
     const {node, parent} = path;
 
@@ -39,7 +40,7 @@ module.exports = {
       const quant = node.quantifier;
       const prevQuant = previousSibling.node.quantifier;
 
-      // If r in unambigous:
+      // If r is unambigous:
       // r{n1, m1}r{n2, m2} -> r{n1 + n2, m1 + m2}
       // (r{n1, m1}?)(r{n2, m2}?) -> r{n1 + n2, m1 + m2}?
       // r{n1,}(r{n2, m2}?) -> r{n1 + n2, }
@@ -107,14 +108,14 @@ module.exports = {
       // r r{n1, m1} -> r{n1 + 1, m1} 
       if (
         previousSibling.hasEqualSource(path.getChild()) &&
-          isUnamb(node.expression)
+        isUnamb(node.expression)
       ) {
         increaseQuantifierByOne(node.quantifier);
         previousSibling.remove();
       }
       return;
     }
-  },
+  }
 };
 
 /*
@@ -122,12 +123,12 @@ module.exports = {
  * range, meaning it has no limit on it's range
  */
 function isGreedyOpenRange(quantifier) {
-  return (
-    quantifier.greedy &&
-      (quantifier.kind === '+' ||
-       quantifier.kind === '*' ||
-       (quantifier.kind === 'Range' && !quantifier.to))
-  );
+  return quantifier.greedy &&
+    (
+      quantifier.kind === '+' ||
+      quantifier.kind === '*' ||
+      (quantifier.kind === 'Range' && !quantifier.to)
+    );
 }
 
 /**

@@ -68,12 +68,12 @@ module.exports = {
           mergeQuantifiers(node, previousSibling, true);
           return;
         }
-        // r{n1,}r{m1} -> r{n1,}
-        if (isGreedyOpenRange(prevQuant) && isFromZero(prevQuant)) {
+        // r{n1,}r{0,m1} -> r{n1,}
+        if (isGreedyOpenRange(prevQuant) && isFromZero(quant)) {
           mergeQuantifiers(node, previousSibling, true);
         }
         // r{n1,m1}r{0,} -> r{n1,}
-        if (isGreedyOpenRange(quant) && isFromZero(prevQuant)) {
+        if (isGreedyOpenRange(quant) && isFromZero(quant)) {
           mergeQuantifiers(node, previousSibling, true);
         }
       } else {
@@ -91,27 +91,40 @@ module.exports = {
           return;
         }
         // r{0,}r{n1,m1} -> r{n1,}
-        if (isGreedyOpenRange(prevQuant) && isFromZero(quant)) {
+        if (isGreedyOpenRange(prevQuant) && isFromZero(prevQuant)) {
           mergeQuantifiers(node, previousSibling, true);
         }
-        // r{m1}r{n1,} -> r{n1,}
-        if (isGreedyOpenRange(quant) && isFromZero(quant)) {
+        // r{0,m1}r{n1,} -> r{n1,}
+        if (isFromZero(prevQuant) && isGreedyOpenRange(quant)) {
           mergeQuantifiers(node, previousSibling, true);
         }
       }
     } else {
+      // r r{n1, m1} -> r{n1 + 1, m1}
       if (
-        !previousSibling.hasEqualSource(path.getChild()) ||
-        !isUnamb(node.expression)
+        previousSibling.hasEqualSource(path.getChild()) &&
+        isUnamb(node.expression)
       ) {
-        return;
+        increaseQuantifierByOne(node.quantifier);
+        previousSibling.remove();
       }
-
-      increaseQuantifierByOne(node.quantifier);
-      previousSibling.remove();
+      return;
     }
   },
 };
+
+/*
+ * Identifies a regex which is greedy and has an open
+ * range, meaning it has no limit on it's range
+ */
+function isGreedyOpenRange(quantifier) {
+  return (
+    quantifier.greedy &&
+    (quantifier.kind === '+' ||
+      quantifier.kind === '*' ||
+      (quantifier.kind === 'Range' && !quantifier.to))
+  );
+}
 
 /**
  * Extracts the from and to values of a quantifier.
@@ -178,7 +191,7 @@ function mergeQuantifiers(node, previous, greedy) {
  *
  * This means that the deepest lookaround of the path is not a
  * lookbehind. This ensures that the current node will be
- * matched in the forward direction.
+ *
  */
 function isForward(path) {
   let parent = path.parentPath;
@@ -216,13 +229,4 @@ function isUnamb(node) {
   } else {
     return false;
   }
-}
-
-function isGreedyOpenRange(quantifier) {
-  return (
-    quantifier.greedy &&
-    (quantifier.kind === '+' ||
-      quantifier.kind === '*' ||
-      (quantifier.kind === 'Range' && !quantifier.to))
-  );
 }

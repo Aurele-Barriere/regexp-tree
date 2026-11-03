@@ -124,7 +124,7 @@ describe('merge closed greedy quantifier with closed ungreedy quantifier if rege
   });
 });
 
-describe('merge closed greedy quantifier with closed ungreedy quantifier if regex is backward and second is forced or first is from zero', () => {
+describe('merge quantifiers of different greedyness if the matching direction is backwardon some specific cases', () => {
   it('a?a{2}?', () => {
     const re = transform(/a?a{2}?/, [quantifiersMerge]);
     expect(re.toString()).toBe('/a?a{2}?/');
@@ -249,7 +249,7 @@ describe('merge closed greedy quantifier with open greedy quantifier', () => {
   });
 });
 
-describe('merge closed greedy quantifier with open ungreedy quantifier if regex is forward and is first is forced or second is from zero', () => {
+describe('merge quantifiers of different greedyness if the matching direction is forward, on some specific cases', () => {
   it('a{2}a+?', () => {
     const re = transform(/a{2}a+?/, [quantifiersMerge]);
     expect(re.toString()).toBe('/a{3,}?/');

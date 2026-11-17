@@ -40,12 +40,15 @@ module.exports = {
       const quant = node.quantifier;
       const prevQuant = previousSibling.node.quantifier;
 
-      // If r is unambigous:
+      // If r is unambigous and n1 = n2 = 0
+      // or if r is unambigous and defines no groups:
       // r{n1, m1}r{n2, m2} -> r{n1 + n2, m1 + m2}
       // (r{n1, m1}?)(r{n2, m2}?) -> r{n1 + n2, m1 + m2}?
       // r{n1,}(r{n2, m2}?) -> r{n1 + n2, }
       // r{n1,m1}?r{n2,} -> r{n1 + n2, }
-      if (isUnamb(node.expression)) {
+      if (isUnamb(node.expression)
+          && (isFromZero(prevQuant) && isFromZero(quant))
+            || !defGroups(node.expression)) {
         if (quant.greedy == prevQuant.greedy) {
           mergeQuantifiers(node, previousSibling, prevQuant.greedy);
           return;
@@ -236,4 +239,18 @@ function isUnamb(node) {
   }
 }
 
-
+/**
+ * Indicates if the current regex defines a group or not.
+ */
+function defGroups(node) {
+  if (node.type == 'Group') {
+    return true;
+  } else if (node.type == 'Disjunction') {
+    return defGroups(node.left) && defGroups(node.right);
+  } else if (node.type == 'Alternative') {
+    return node.expressions.every(x => isUnamb(x));
+  } else if (node.type == 'Repetition' && isForced(node.quantifier)) {
+    return defGroups(node.expression);
+  } else {
+    return false;
+  }

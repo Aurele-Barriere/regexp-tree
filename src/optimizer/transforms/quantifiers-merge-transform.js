@@ -47,8 +47,8 @@ module.exports = {
       // r{n1,}(r{n2, m2}?) -> r{n1 + n2, }
       // r{n1,m1}?r{n2,} -> r{n1 + n2, }
       if (isUnamb(node.expression)
-          && (isFromZero(prevQuant) && isFromZero(quant))
-            || !defGroups(node.expression)) {
+          && (isFromZero(prevQuant) && isFromZero(quant)
+              || !defGroups(node.expression))) {
         if (quant.greedy == prevQuant.greedy) {
           mergeQuantifiers(node, previousSibling, prevQuant.greedy);
           return;

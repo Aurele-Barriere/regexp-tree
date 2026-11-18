@@ -127,12 +127,12 @@ module.exports = {
  * range, meaning it has no limit on it's range
  */
 function isGreedyOpenRange(quantifier) {
-  return (
-    quantifier.greedy &&
-    (quantifier.kind === '+' ||
-     quantifier.kind === '*' ||
-    (quantifier.kind === 'Range' && !quantifier.to))
-  );
+  return quantifier.greedy &&
+    (
+      quantifier.kind === '+' ||
+      quantifier.kind === '*' ||
+      (quantifier.kind === 'Range' && !quantifier.to)
+    );
 }
 
 /**

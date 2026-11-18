@@ -15,14 +15,10 @@ const {increaseQuantifierByOne} = require('../../transform/utils');
  * a{1,2}a{0,3} -> a{1,5}
  */
 module.exports = {
-
   Repetition(path) {
     const {node, parent} = path;
 
-    if (
-      parent.type !== 'Alternative' ||
-      !path.index
-    ) {
+    if (parent.type !== 'Alternative' || !path.index) {
       return;
     }
 
@@ -46,9 +42,11 @@ module.exports = {
       // (r{n1, m1}?)(r{n2, m2}?) -> r{n1 + n2, m1 + m2}?
       // r{n1,}(r{n2, m2}?) -> r{n1 + n2, }
       // r{n1,m1}?r{n2,} -> r{n1 + n2, }
-      if (isUnamb(node.expression)
-          && (isFromZero(prevQuant) && isFromZero(quant)
-              || !defGroups(node.expression))) {
+      if (
+        isUnamb(node.expression) &&
+        ((isFromZero(prevQuant) && isFromZero(quant)) ||
+          !defGroups(node.expression))
+      ) {
         if (quant.greedy == prevQuant.greedy) {
           mergeQuantifiers(node, previousSibling, prevQuant.greedy);
           return;
@@ -108,7 +106,7 @@ module.exports = {
       }
     } else {
       // If r is unambigous:
-      // r r{n1, m1} -> r{n1 + 1, m1} 
+      // r r{n1, m1} -> r{n1 + 1, m1}
       if (
         previousSibling.hasEqualSource(path.getChild()) &&
         isUnamb(node.expression)
@@ -118,7 +116,7 @@ module.exports = {
       }
       return;
     }
-  }
+  },
 };
 
 /*
@@ -126,12 +124,12 @@ module.exports = {
  * range, meaning it has no limit on it's range
  */
 function isGreedyOpenRange(quantifier) {
-  return quantifier.greedy &&
-    (
-      quantifier.kind === '+' ||
+  return (
+    quantifier.greedy &&
+    (quantifier.kind === '+' ||
       quantifier.kind === '*' ||
-      (quantifier.kind === 'Range' && !quantifier.to)
-    );
+      (quantifier.kind === 'Range' && !quantifier.to))
+  );
 }
 
 /**
@@ -199,7 +197,7 @@ function mergeQuantifiers(node, previous, greedy) {
  *
  * This means that the deepest lookaround of the path is not a
  * lookbehind. This ensures that the current node will be
- * 
+ * matched in the forward direction.
  */
 function isForward(path) {
   let parent = path.parentPath;
@@ -221,11 +219,11 @@ function isForward(path) {
 function isUnamb(node) {
   if (
     node.type == 'Epsilon' ||
-      node.type == 'Char' ||
-      node.type == 'CharacterClass' ||
-      node.type == 'UnicodeProperty' ||
-      node.type == 'Backreference' ||
-      node.type == 'Assertion'
+    node.type == 'Char' ||
+    node.type == 'CharacterClass' ||
+    node.type == 'UnicodeProperty' ||
+    node.type == 'Backreference' ||
+    node.type == 'Assertion'
   ) {
     return true;
   } else if (node.type == 'Alternative') {

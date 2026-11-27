@@ -57,7 +57,7 @@ module.exports = {
           return;
         }
         if (noGroups &&
-	    (isGreedyOpenRange(prevQuant) || isGreedyOpenRange(quant))) {
+            (isGreedyOpenRange(prevQuant) || isGreedyOpenRange(quant))) {
           mergeQuantifiers(node, previousSibling, true);
           return;
         }
@@ -80,10 +80,12 @@ module.exports = {
         // r{n1,}r{0,m1} -> r{n1,}
         if (isGreedyOpenRange(prevQuant) && isFromZero(quant)) {
           mergeQuantifiers(node, previousSibling, true);
+          return;
         }
         // r{n1,m1}r{0,} -> r{n1,}
         if (isGreedyOpenRange(quant) && isFromZero(quant)) {
           mergeQuantifiers(node, previousSibling, true);
+          return;
         }
       } else {
         // r{n1,m1}r{n2} -> r{n1+n2,m1+n2}
@@ -102,10 +104,12 @@ module.exports = {
         // r{0,}r{n1,m1} -> r{n1,}
         if (isGreedyOpenRange(prevQuant) && isFromZero(prevQuant)) {
           mergeQuantifiers(node, previousSibling, true);
+          return;
         }
         // r{0,m1}r{n1,} -> r{n1,}
         if (isFromZero(prevQuant) && isGreedyOpenRange(quant)) {
           mergeQuantifiers(node, previousSibling, true);
+          return;
         }
       }
     } else {
@@ -246,13 +250,18 @@ function isUnamb(node) {
  */
 function defGroups(node) {
   if (node.type == 'Group') {
-    return true;
+    return node.capturing || defGroups(node.expression);
   } else if (node.type == 'Disjunction') {
-    return defGroups(node.left) && defGroups(node.right);
+    return defGroups(node.left) || defGroups(node.right);
   } else if (node.type == 'Alternative') {
-    return node.expressions.every(x => isUnamb(x));
-  } else if (node.type == 'Repetition' && isForced(node.quantifier)) {
+    return node.expressions.some(x => defGroups(x));
+  } else if (node.type == 'Repetition') {
     return defGroups(node.expression);
+  } else if (
+    node.type == 'Assertion' &&
+    (node.kind == 'Lookahead' || node.kind == 'Lookbehind')
+  ) {
+    return node.assertion !== null && defGroups(node.assertion);
   } else {
     return false;
   }

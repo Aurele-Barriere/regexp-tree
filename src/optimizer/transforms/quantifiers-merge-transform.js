@@ -39,24 +39,25 @@ module.exports = {
       const quant = node.quantifier;
       const prevQuant = previousSibling.node.quantifier;
 
-      // If r is unambigous and n1 = n2 = 0
-      // or if r is unambigous and defines no groups:
-      // r{n1, m1}r{n2, m2} -> r{n1 + n2, m1 + m2}
-      // (r{n1, m1}?)(r{n2, m2}?) -> r{n1 + n2, m1 + m2}?
-      // r{n1,}(r{n2, m2}?) -> r{n1 + n2, }
-      // r{n1,m1}?r{n2,} -> r{n1 + n2, }
-      if (
-        isUnamb(node.expression) &&
-        ((isFromZero(prevQuant) && isFromZero(quant)) ||
-          !defGroups(node.expression))
-      ) {
-        if (quant.greedy == prevQuant.greedy) {
+      // When r is unambiguous, there are three specific cases:
+      // n1 = n2 = 0 and same greediness
+      // r defines no groups and same greediness
+      // r defines no groups, and one quantifier is greedy open
+      if (isUnamb(node.expression)) {
+        const noGroups = !defGroups(node.expression);
+        if (
+          isFromZero(prevQuant) && isFromZero(quant) &&
+          prevQuant.greedy == quant.greedy
+        ) {
           mergeQuantifiers(node, previousSibling, prevQuant.greedy);
           return;
-        } else if (isGreedyOpenRange(prevQuant)) {
-          mergeQuantifiers(node, previousSibling, true);
+        }
+        if (noGroups && prevQuant.greedy == quant.greedy) {
+          mergeQuantifiers(node, previousSibling, prevQuant.greedy);
           return;
-        } else if (isGreedyOpenRange(quant)) {
+        }
+        if (noGroups &&
+	    (isGreedyOpenRange(prevQuant) || isGreedyOpenRange(quant))) {
           mergeQuantifiers(node, previousSibling, true);
           return;
         }
